@@ -1,0 +1,74 @@
+package {{package}}
+
+{{#imports}}import {{import}}
+{{/imports}}
+import org.http4s.{Header, Headers, Request, Uri}
+import org.http4s.client.blaze._
+import org.http4s.dsl._
+import org.http4s.circe._
+import org.http4s.client.Client
+import io.circe.generic.auto._
+import io.circe._
+import io.circe.generic._
+import io.circe.syntax._
+import io.circe.java8.time._
+
+import scalaz.concurrent.Task
+import scala.collection.mutable
+
+import io.swagger.client.EncodersDecoders._
+
+{{#operations}}
+class {{classname}}(client: Client) {
+
+  {{#operation}}
+  def {{operationId}}({{#allParams}}{{^required}}{{paramName}}: Option[{{dataType}}] = {{#defaultValue}}Some("{{defaultValue}}"){{/defaultValue}}{{^defaultValue}}None{{/defaultValue}}{{#hasMore}},{{/hasMore}}
+      {{/required}}{{#required}}{{paramName}}: {{dataType}}{{#defaultValue}} = {{{defaultValue}}}{{/defaultValue}}{{#hasMore}},
+      {{/hasMore}}{{/required}}{{/allParams}})(implicit dec: Decoder[{{returnType}}{{^returnType}}Unit{{/returnType}}]){{#returnType}}: Task[{{returnType}}]{{/returnType}}{{^returnType}}: Task[Unit]{{/returnType}} = {
+    // create path and map variables
+    val path = (("{{path}}"){{#pathParams}} replaceAll ("\\{" + "{{baseName}}" + "\\}",{{paramName}}.toString){{/pathParams}})
+
+    // query params
+    val queryParams = new mutable.HashMap[String, String]
+    val headerParams = new mutable.HashMap[String, String]
+
+    {{#allParams}}
+    {{#required}}
+    {{^isPrimitiveType}}
+    if ({{paramName}} == null) throw new Exception("Missing required parameter '{{paramName}}' when calling {{classname}}->{{operationId}}")
+
+    {{/isPrimitiveType}}
+    {{/required}}
+    {{/allParams}}
+    {{#queryParams}}
+    {{^required}}
+    if ({{paramName}} != null) {{paramName}}.foreach { v => queryParams += "{{baseName}}" -> v.toString }
+
+    {{/required}}
+    {{#required}}
+    if ({{paramName}} != null) queryParams += "{{baseName}}" -> {{paramName}}.toString
+
+    {{/required}}
+    {{/queryParams}}
+
+    {{#headerParams}}
+    headerParams += "{{baseName}}" -> {{paramName}}.toString
+    {{/headerParams}}
+
+    val requestWithQueryParams  = queryParams.foldLeft(Uri.fromString(path).toOption.get) { case (req, (k, v)) => req.withQueryParam(k, v)}
+    val headers = Headers(headerParams.map{ case (k, v) => Header(k, v)}.toList)
+    val fullReq = Request(method = {{httpMethod}}, uri = requestWithQueryParams, headers = headers)
+
+    val fullReqWithBody = {{#bodyParam}}fullReq.withBody({{paramName}}){{/bodyParam}}{{^bodyParam}}fullReq{{/bodyParam}}
+
+    // decoders
+    implicit val hdecoder = jsonOf[{{returnType}}{{^returnType}}Unit{{/returnType}}](dec)
+
+
+    client.fetchAs[{{returnType}}{{^returnType}}Unit{{/returnType}}](fullReqWithBody)
+  }
+
+  {{/operation}}
+
+}
+{{/operations}}

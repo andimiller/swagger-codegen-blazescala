@@ -1,0 +1,38 @@
+package {{invokerPackage}}
+
+{{#imports}}import {{import}}
+{{/imports}}
+import {{apiPackage}}._
+import org.http4s.client.blaze._
+import org.http4s.client.Client
+
+
+class {{clientName}}(injectedClient: Option[Client] = None) {
+
+  val client = injectedClient.getOrElse(PooledHttp1Client.apply())
+  {{#apiInfo}}{{#apis}}
+  val {{classVarName}} = new {{classname}}(client)
+  {{/apis}}{{/apiInfo}}
+
+}
+
+import model._
+import io.circe._
+import io.circe.generic.auto._
+import io.circe.java8.time._
+
+object EncodersDecoders {
+  {{#models}}
+
+  {{#model}}
+  implicit val {{classname}}Decoder: Decoder[{{classname}}] =
+    Decoder.forProduct{{vars.size}}({{#vars}}"{{name}}"{{#hasMore}}, {{/hasMore}}{{/vars}})({{classname}}.apply)
+
+  implicit val {{classname}}Encoder: Encoder[{{classname}}] =
+    Encoder.forProduct{{vars.size}}({{#vars}}"{{name}}"{{#hasMore}}, {{/hasMore}}{{/vars}}){ x =>
+      ({{#vars}}x.{{name}}{{#hasMore}}, {{/hasMore}}{{/vars}})
+    }
+
+  {{/model}}
+  {{/models}}
+}
