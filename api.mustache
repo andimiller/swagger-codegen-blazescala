@@ -7,12 +7,10 @@ import org.http4s.client.blaze._
 import org.http4s.dsl._
 import org.http4s.argonaut._
 import org.http4s.client.Client
-import argonaut._, Argonaut._, ArgonautShapeless._
+import argonaut._, Argonaut._
 
 import scalaz.concurrent.Task
 import scala.collection.mutable
-
-import argonautCodecs.ArgonautCodecs._
 
 {{#operations}}
 class {{classname}}(client: Client) {
@@ -20,7 +18,7 @@ class {{classname}}(client: Client) {
   {{#operation}}
   def {{operationId}}({{#allParams}}{{^required}}{{paramName}}: Option[{{dataType}}] = {{#defaultValue}}Some("{{defaultValue}}"){{/defaultValue}}{{^defaultValue}}None{{/defaultValue}}{{#hasMore}},{{/hasMore}}
       {{/required}}{{#required}}{{paramName}}: {{dataType}}{{#defaultValue}} = {{{defaultValue}}}{{/defaultValue}}{{#hasMore}},
-      {{/hasMore}}{{/required}}{{/allParams}})(implicit codec: CodecJson[{{returnType}}{{^returnType}}Unit{{/returnType}}]){{#returnType}}: Task[{{returnType}}]{{/returnType}}{{^returnType}}: Task[Unit]{{/returnType}} = {
+      {{/hasMore}}{{/required}}{{/allParams}})(implicit {{#bodyParam}}encoder: EncodeJson[{{dataType}}],{{/bodyParam}} decoder: DecodeJson[{{returnType}}{{^returnType}}Unit{{/returnType}}]){{#returnType}}: Task[{{returnType}}]{{/returnType}}{{^returnType}}: Task[Unit]{{/returnType}} = {
     // create path and map variables
     val path = (("{{path}}"){{#pathParams}} replaceAll ("\\{" + "{{baseName}}" + "\\}",{{paramName}}.toString){{/pathParams}})
 
@@ -55,9 +53,9 @@ class {{classname}}(client: Client) {
     val headers = Headers(headerParams.map{ case (k, v) => Header(k, v)}.toList)
     val fullReq = Request(method = {{httpMethod}}, uri = requestWithQueryParams, headers = headers)
 
-    val fullReqWithBody = {{#bodyParam}}fullReq.withBody({{paramName}})(jsonEncoderOf){{/bodyParam}}{{^bodyParam}}fullReq{{/bodyParam}}
+    val fullReqWithBody = {{#bodyParam}}fullReq.withBody({{paramName}})(jsonEncoderOf(encoder)){{/bodyParam}}{{^bodyParam}}fullReq{{/bodyParam}}
 
-    client.fetchAs[{{returnType}}{{^returnType}}Unit{{/returnType}}](fullReqWithBody)(jsonOf)
+    client.fetchAs(fullReqWithBody)(jsonOf(decoder))
   }
 
   {{/operation}}
