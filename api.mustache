@@ -5,18 +5,14 @@ package {{package}}
 import org.http4s.{Header, Headers, Request, Uri}
 import org.http4s.client.blaze._
 import org.http4s.dsl._
-import org.http4s.circe._
+import org.http4s.argonaut._
 import org.http4s.client.Client
-import io.circe.generic.auto._
-import io.circe._
-import io.circe.generic._
-import io.circe.syntax._
-import io.circe.java8.time._
+import argonaut._, Argonaut._, ArgonautShapeless._
 
 import scalaz.concurrent.Task
 import scala.collection.mutable
 
-import io.swagger.client.EncodersDecoders._
+import argonautCodecs.ArgonautCodecs._
 
 {{#operations}}
 class {{classname}}(client: Client) {
@@ -24,7 +20,7 @@ class {{classname}}(client: Client) {
   {{#operation}}
   def {{operationId}}({{#allParams}}{{^required}}{{paramName}}: Option[{{dataType}}] = {{#defaultValue}}Some("{{defaultValue}}"){{/defaultValue}}{{^defaultValue}}None{{/defaultValue}}{{#hasMore}},{{/hasMore}}
       {{/required}}{{#required}}{{paramName}}: {{dataType}}{{#defaultValue}} = {{{defaultValue}}}{{/defaultValue}}{{#hasMore}},
-      {{/hasMore}}{{/required}}{{/allParams}})(implicit dec: Decoder[{{returnType}}{{^returnType}}Unit{{/returnType}}]){{#returnType}}: Task[{{returnType}}]{{/returnType}}{{^returnType}}: Task[Unit]{{/returnType}} = {
+      {{/hasMore}}{{/required}}{{/allParams}})(implicit codec: CodecJson[{{returnType}}{{^returnType}}Unit{{/returnType}}]){{#returnType}}: Task[{{returnType}}]{{/returnType}}{{^returnType}}: Task[Unit]{{/returnType}} = {
     // create path and map variables
     val path = (("{{path}}"){{#pathParams}} replaceAll ("\\{" + "{{baseName}}" + "\\}",{{paramName}}.toString){{/pathParams}})
 
@@ -59,13 +55,9 @@ class {{classname}}(client: Client) {
     val headers = Headers(headerParams.map{ case (k, v) => Header(k, v)}.toList)
     val fullReq = Request(method = {{httpMethod}}, uri = requestWithQueryParams, headers = headers)
 
-    val fullReqWithBody = {{#bodyParam}}fullReq.withBody({{paramName}}){{/bodyParam}}{{^bodyParam}}fullReq{{/bodyParam}}
+    val fullReqWithBody = {{#bodyParam}}fullReq.withBody({{paramName}})(jsonEncoderOf){{/bodyParam}}{{^bodyParam}}fullReq{{/bodyParam}}
 
-    // decoders
-    implicit val hdecoder = jsonOf[{{returnType}}{{^returnType}}Unit{{/returnType}}](dec)
-
-
-    client.fetchAs[{{returnType}}{{^returnType}}Unit{{/returnType}}](fullReqWithBody)
+    client.fetchAs[{{returnType}}{{^returnType}}Unit{{/returnType}}](fullReqWithBody)(jsonOf)
   }
 
   {{/operation}}
