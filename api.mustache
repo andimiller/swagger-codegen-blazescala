@@ -13,14 +13,14 @@ import scalaz.concurrent.Task
 import scala.collection.mutable
 
 {{#operations}}
-class {{classname}}(client: Client) {
+class {{classname}}(client: Client, baseUri: Uri) {
 
   {{#operation}}
   def {{operationId}}({{#allParams}}{{^required}}{{paramName}}: Option[{{dataType}}] = {{#defaultValue}}Some("{{defaultValue}}"){{/defaultValue}}{{^defaultValue}}None{{/defaultValue}}{{#hasMore}},{{/hasMore}}
       {{/required}}{{#required}}{{paramName}}: {{dataType}}{{#defaultValue}} = {{{defaultValue}}}{{/defaultValue}}{{#hasMore}},
       {{/hasMore}}{{/required}}{{/allParams}})(implicit {{#bodyParam}}encoder: EncodeJson[{{dataType}}],{{/bodyParam}} decoder: DecodeJson[{{returnType}}{{^returnType}}Unit{{/returnType}}]){{#returnType}}: Task[{{returnType}}]{{/returnType}}{{^returnType}}: Task[Unit]{{/returnType}} = {
     // create path and map variables
-    val path = (("{{path}}"){{#pathParams}} replaceAll ("\\{" + "{{baseName}}" + "\\}",{{paramName}}.toString){{/pathParams}})
+    val path = baseUri / (("{{path}}"){{#pathParams}} replaceAll ("\\{" + "{{baseName}}" + "\\}",{{paramName}}.toString){{/pathParams}})
 
     // query params
     val queryParams = new mutable.HashMap[String, String]
@@ -49,11 +49,11 @@ class {{classname}}(client: Client) {
     headerParams += "{{baseName}}" -> {{paramName}}.toString
     {{/headerParams}}
 
-    val requestWithQueryParams  = queryParams.foldLeft(Uri.fromString(path).toOption.get) { case (req, (k, v)) => req.withQueryParam(k, v)}
+    val requestWithQueryParams  = queryParams.foldLeft(path) { case (req, (k, v)) => req.withQueryParam(k, v)}
     val headers = Headers(headerParams.map{ case (k, v) => Header(k, v)}.toList)
     val fullReq = Request(method = {{httpMethod}}, uri = requestWithQueryParams, headers = headers)
 
-    val fullReqWithBody = {{#bodyParam}}fullReq.withBody({{paramName}})(jsonEncoderOf(encoder)){{/bodyParam}}{{^bodyParam}}fullReq{{/bodyParam}}
+    val fullReqWithBody = {{#bodyParam}}{{#required}}fullReq.withBody({{paramName}})(jsonEncoderOf(encoder)){{/required}}{{^required}}{{paramName}}.foldLeft(fullReq){(r, p) => r.withBody(p)(jsonEncoderOf(encoder)).run}{{/required}}{{/bodyParam}}{{^bodyParam}}fullReq{{/bodyParam}}
 
     client.fetchAs(fullReqWithBody)(jsonOf(decoder))
   }

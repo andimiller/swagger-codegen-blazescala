@@ -5,13 +5,14 @@ package {{invokerPackage}}
 import {{apiPackage}}._
 import org.http4s.client.blaze._
 import org.http4s.client.Client
+import org.http4s.Uri
 
 
-class {{clientName}}(injectedClient: Option[Client] = None) {
+class {{clientName}}(injectedClient: Option[Client] = None, baseUri: Uri = Uri.uri("{{basePath}}")) {
 
   val client = injectedClient.getOrElse(PooledHttp1Client.apply())
   {{#apiInfo}}{{#apis}}
-  val {{classVarName}} = new {{classname}}(client)
+  val {{classVarName}} = new {{classname}}(client, baseUri)
   {{/apis}}{{/apiInfo}}
 
 }
