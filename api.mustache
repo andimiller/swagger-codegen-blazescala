@@ -12,15 +12,41 @@ import argonaut._, Argonaut._
 import scalaz.concurrent.Task
 import scala.collection.mutable
 
+import scalaz._
+import Scalaz._
+
 {{#operations}}
 class {{classname}}(client: Client, baseUri: Uri) {
+
+  implicit def listShow[T](implicit s: Show[T]): Show[List[T]] = new Show[List[T]] {
+    override def shows(xs: List[T]): String = xs.foldLeft("") { (a, n) =>
+      if (a == "") n.shows else a + "," + n.shows
+    }
+  }
+
+  implicit object integerShow extends Show[Integer] {
+    override def shows(i: Integer): String = i.toString
+  }
+
+  implicit object stringInstance extends Monoid[String] with Show[String] with Equal[String] with Order[String] with IsEmpty[({ type λ[α] = String })#λ] {
+    type SA[α] = String
+    def append(f1: String, f2: => String) = f1 + f2
+    def zero: String = ""
+    override def show(f: String) = f
+    def order(x: String, y: String) = Ordering.fromInt(x.compareTo(y))
+    override def equal(x: String, y: String) = x == y
+    override def equalIsNatural: Boolean = true
+    def empty[A] = zero
+    def plus[A](f1: SA[A], f2: => SA[A]) = f1 + f2
+    def isEmpty[A](s: SA[A]) = s == ""
+  }
 
   {{#operation}}
   def {{operationId}}({{#allParams}}{{^required}}{{paramName}}: Option[{{dataType}}] = {{#defaultValue}}Some("{{defaultValue}}"){{/defaultValue}}{{^defaultValue}}None{{/defaultValue}}{{#hasMore}},{{/hasMore}}
       {{/required}}{{#required}}{{paramName}}: {{dataType}}{{#defaultValue}} = {{{defaultValue}}}{{/defaultValue}}{{#hasMore}},
       {{/hasMore}}{{/required}}{{/allParams}})(implicit {{#bodyParam}}encoder: EncodeJson[{{dataType}}],{{/bodyParam}} decoder: DecodeJson[{{returnType}}{{^returnType}}Unit{{/returnType}}]){{#returnType}}: Task[{{returnType}}]{{/returnType}}{{^returnType}}: Task[Unit]{{/returnType}} = {
     // create path and map variables
-    val path = baseUri / (("{{path}}"){{#pathParams}} replaceAll ("\\{" + "{{baseName}}" + "\\}",{{paramName}}.toString){{/pathParams}})
+    val path = baseUri / (("{{path}}".stripPrefix("/")){{#pathParams}} replaceAll ("\\{" + "{{baseName}}" + "\\}",{{paramName}}.toString){{/pathParams}})
 
     // query params
     val queryParams = new mutable.HashMap[String, String]
@@ -36,17 +62,17 @@ class {{classname}}(client: Client, baseUri: Uri) {
     {{/allParams}}
     {{#queryParams}}
     {{^required}}
-    if ({{paramName}} != null) {{paramName}}.foreach { v => queryParams += "{{baseName}}" -> v.toString }
+    if ({{paramName}} != null) {{paramName}}.foreach { v => queryParams += "{{baseName}}" -> v.shows}
 
     {{/required}}
     {{#required}}
-    if ({{paramName}} != null) queryParams += "{{baseName}}" -> {{paramName}}.toString
+    if ({{paramName}} != null) queryParams += "{{baseName}}" -> ({{paramName}}.shows)
 
     {{/required}}
     {{/queryParams}}
 
     {{#headerParams}}
-    headerParams += "{{baseName}}" -> {{paramName}}.toString
+    headerParams += "{{baseName}}" -> {{paramName}}.shows
     {{/headerParams}}
 
     val requestWithQueryParams  = queryParams.foldLeft(path) { case (req, (k, v)) => req.withQueryParam(k, v)}
