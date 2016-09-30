@@ -2,11 +2,12 @@ package {{package}}
 
 {{#imports}}import {{import}}
 {{/imports}}
-import org.http4s.{Header, Headers, Request, Uri}
+import org.http4s.{Header, Headers, Request, Uri, OAuth2BearerToken}
 import org.http4s.client.blaze._
 import org.http4s.dsl._
 import org.http4s.argonaut._
 import org.http4s.client.Client
+import org.http4s.headers.Authorization
 import argonaut._, Argonaut._
 
 import scalaz.concurrent.Task
@@ -22,7 +23,7 @@ class {{classname}}(client: Client, baseUri: Uri) {
   {{#operation}}
   def {{operationId}}({{#allParams}}{{^required}}{{paramName}}: Option[{{dataType}}] = {{#defaultValue}}Some("{{defaultValue}}"){{/defaultValue}}{{^defaultValue}}None{{/defaultValue}}{{#hasMore}},{{/hasMore}}
       {{/required}}{{#required}}{{paramName}}: {{dataType}}{{#defaultValue}} = {{{defaultValue}}}{{/defaultValue}}{{#hasMore}},
-      {{/hasMore}}{{/required}}{{/allParams}})(implicit {{#bodyParam}}encoder: EncodeJson[{{dataType}}],{{/bodyParam}} decoder: DecodeJson[{{returnType}}{{^returnType}}Unit{{/returnType}}]){{#returnType}}: Task[{{returnType}}]{{/returnType}}{{^returnType}}: Task[Unit]{{/returnType}} = {
+      {{/hasMore}}{{/required}}{{/allParams}}, token: Option[String] = None)(implicit {{#bodyParam}}encoder: EncodeJson[{{dataType}}],{{/bodyParam}} decoder: DecodeJson[{{returnType}}{{^returnType}}Unit{{/returnType}}]){{#returnType}}: Task[{{returnType}}]{{/returnType}}{{^returnType}}: Task[Unit]{{/returnType}} = {
     // create path and map variables
     val path = baseUri / (("{{path}}".stripPrefix("/")){{#pathParams}} replaceAll ("\\{" + "{{baseName}}" + "\\}",{{paramName}}.toString){{/pathParams}})
 
@@ -57,7 +58,9 @@ class {{classname}}(client: Client, baseUri: Uri) {
     val headers = Headers(headerParams.map{ case (k, v) => Header(k, v)}.toList)
     val fullReq = Request(method = {{httpMethod}}, uri = requestWithQueryParams, headers = headers)
 
-    val fullReqWithBody = {{#bodyParam}}{{#required}}fullReq.withBody({{paramName}})(jsonEncoderOf(encoder)){{/required}}{{^required}}{{paramName}}.foldLeft(fullReq){(r, p) => r.withBody(p)(jsonEncoderOf(encoder)).run}{{/required}}{{/bodyParam}}{{^bodyParam}}fullReq{{/bodyParam}}
+    val fullReqWithToken = token.foldLeft(fullReq)((r, t) => r.copy(headers = r.headers.put(Authorization(OAuth2BearerToken(t)))))
+
+    val fullReqWithBody = {{#bodyParam}}{{#required}}fullReqWithToken.withBody({{paramName}})(jsonEncoderOf(encoder)){{/required}}{{^required}}{{paramName}}.foldLeft(fullReq){(r, p) => r.withBody(p)(jsonEncoderOf(encoder)).run}{{/required}}{{/bodyParam}}{{^bodyParam}}fullReqWithToken{{/bodyParam}}
 
     client.fetchAs(fullReqWithBody)(jsonOf(decoder))
   }
