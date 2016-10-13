@@ -16,25 +16,19 @@ import scala.collection.mutable
 import scalaz._
 import Scalaz._
 import querystringencoders.QueryStringEncoders._
-import shapeless._
+import shapeless.{CNil, :+: => ::+::, Coproduct}
 
 {{#operations}}
 class {{classname}}(client: Client, baseUri: Uri) {
 
   {{#operation}}
-  type {{operationId}}Errors = {{#responses}}{{^isDefault}}{{dataType}}{{#hasMore}} :+: {{/hasMore}}{{^hasMore}} :+: CNil{{/hasMore}}{{/isDefault}}{{/responses}}
+  type {{operationId}}Errors = {{#responses}}{{^isDefault}}{{dataType}}{{#hasMore}} ::+:: {{/hasMore}}{{^hasMore}} ::+:: CNil{{/hasMore}}{{/isDefault}}{{/responses}}
 
   def {{operationId}}({{#allParams}}{{^required}}{{paramName}}: Option[{{dataType}}] = {{#defaultValue}}Some("{{defaultValue}}"){{/defaultValue}}{{^defaultValue}}None{{/defaultValue}}{{#hasMore}},{{/hasMore}}
       {{/required}}{{#required}}{{paramName}}: {{dataType}}{{#defaultValue}} = {{{defaultValue}}}{{/defaultValue}}{{#hasMore}},
       {{/hasMore}}{{/required}}{{/allParams}}, token: Option[String] = None)(implicit {{#bodyParam}}encoder: EncodeJson[{{dataType}}],{{/bodyParam}} decoder: DecodeJson[{{returnType}}{{^returnType}}Unit{{/returnType}}]{{#responses}}{{^isDefault}}{{dataType}}decoder: DecodeJson[{{dataType}}]{{/isDefault}}{{#hasMore}},{{/hasMore}}{{/responses}}){{#returnType}}: Task[\/[{{operationId}}Errors,{{returnType}}]]{{/returnType}}{{^returnType}}: Task[\/[{{operationId}}Errors,Unit]]{{/returnType}} = {
     // create path and map variables
     val path = baseUri / (("{{path}}".stripPrefix("/")){{#pathParams}} replaceAll ("\\{" + "{{baseName}}" + "\\}",{{paramName}}.toString){{/pathParams}})
-
-    /*
-      {{#responses}}
-      	{{dataType}}
-      {{/responses}}
-    */
 
     // query params
     val queryParams = new mutable.HashMap[String, String]
@@ -71,7 +65,7 @@ class {{classname}}(client: Client, baseUri: Uri) {
 
     val fullReqWithBody = {{#bodyParam}}{{#required}}fullReqWithToken.withBody({{paramName}})(jsonEncoderOf(encoder)){{/required}}{{^required}}{{paramName}}.foldLeft(fullReq){(r, p) => r.withBody(p)(jsonEncoderOf(encoder)).run}{{/required}}{{/bodyParam}}{{^bodyParam}}fullReqWithToken{{/bodyParam}}
 
-    val d = decoder.map(_.right[{{operationId}}Errors]){{#responses}}{{^isDefault}} ||| {{dataType}}decoder.map(_.left[{{returnType}}{{^returnType}}Unit{{/returnType}}]){{/isDefault}}{{/responses}}
+    val d = decoder.map(_.right[{{operationId}}Errors]){{#responses}}{{^isDefault}} ||| {{dataType}}decoder.map(x => Coproduct[{{operationId}}Errors](x).left[{{returnType}}{{^returnType}}Unit{{/returnType}}]){{/isDefault}}{{/responses}}
 
     client.fetchAs(fullReqWithBody)(jsonOf(d))
   }
