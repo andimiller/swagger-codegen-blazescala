@@ -14,15 +14,15 @@ import scalaz.concurrent.Task
 import scala.collection.mutable
 
 import scalaz._
-import Scalaz._
+import Scalaz.{:+: => _, _}
 import querystringencoders.QueryStringEncoders._
-import shapeless.{CNil, :+: => ::+::, Coproduct}
+import shapeless._
 
 {{#operations}}
 class {{classname}}(client: Client, baseUri: Uri) {
 
   {{#operation}}
-  type {{operationId}}Errors = {{#responses}}{{^isDefault}}{{dataType}}{{#hasMore}} ::+:: {{/hasMore}}{{^hasMore}} ::+:: CNil{{/hasMore}}{{/isDefault}}{{/responses}}
+  type {{operationId}}Errors = {{#responses}}{{^isDefault}}{{dataType}}{{#hasMore}} :+: {{/hasMore}}{{^hasMore}} :+: CNil{{/hasMore}}{{/isDefault}}{{/responses}}
 
   def {{operationId}}({{#allParams}}{{^required}}{{paramName}}: Option[{{dataType}}] = {{#defaultValue}}Some("{{defaultValue}}"){{/defaultValue}}{{^defaultValue}}None{{/defaultValue}}{{#hasMore}},{{/hasMore}}
       {{/required}}{{#required}}{{paramName}}: {{dataType}}{{#defaultValue}} = {{{defaultValue}}}{{/defaultValue}}{{#hasMore}},
