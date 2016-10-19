@@ -65,9 +65,15 @@ class {{classname}}(client: Client, baseUri: Uri) {
 
     val fullReqWithBody = {{#bodyParam}}{{#required}}fullReqWithToken.withBody({{paramName}})(jsonEncoderOf(encoder)){{/required}}{{^required}}{{paramName}}.foldLeft(fullReq){(r, p) => r.withBody(p)(jsonEncoderOf(encoder)).run}{{/required}}{{/bodyParam}}{{^bodyParam}}fullReqWithToken{{/bodyParam}}
 
-    val d = decoder.map(_.right[{{operationId}}Errors]){{#responses}}{{^isDefault}} ||| {{dataType}}decoder.map(x => Coproduct[{{operationId}}Errors](x).left[{{returnType}}{{^returnType}}Unit{{/returnType}}]){{/isDefault}}{{/responses}}
-
-    client.fetchAs(fullReqWithBody)(jsonOf(d))
+    client.fetch(fullReqWithBody) { resp =>
+      val dec = resp.status.code match {
+        case 200 => decoder.map(_.right[{{operationId}}Errors])
+        {{#responses}}
+        {{^isDefault}}case {{code}} => {{dataType}}decoder.map(x => Coproduct[{{operationId}}Errors](x).left[{{returnType}}{{^returnType}}Unit{{/returnType}}]){{/isDefault}}
+        {{/responses}}
+      }
+      resp.as(jsonOf(dec))
+    }
   }
 
   {{/operation}}
