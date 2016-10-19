@@ -30,7 +30,7 @@ class {{classname}}(client: Client, baseUri: Uri) {
     // create path and map variables
     val path = baseUri / (("{{path}}".stripPrefix("/")){{#pathParams}} replaceAll ("\\{" + "{{baseName}}" + "\\}",{{paramName}}.toString){{/pathParams}})
 
-    val queryParams = List(
+    val queryParams = List[Option[(String, String)]](
     {{#queryParams}}
     {{^required}}
       {{paramName}}.map{ v => ("{{baseName}}" -> v.queryString)}
@@ -40,13 +40,13 @@ class {{classname}}(client: Client, baseUri: Uri) {
     {{/required}}
     {{#hasMore}},{{/hasMore}}
     {{/queryParams}}
-    ).flatten.toMap
+    ).flatten.toMap[String, String]
 
-    val headerParams = List(
+    val headerParams = List[(String, String)](
     {{#headerParams}}
       "{{baseName}}" -> {{paramName}}.queryString
     {{/headerParams}}
-    ).toMap
+    ).toMap[String, String]
 
     val requestWithQueryParams  = queryParams.foldLeft(path) { case (req, (k, v)) => req.withQueryParam(k, v)}
     val headers = Headers(headerParams.map{ case (k, v) => Header(k, v)}.toList)
