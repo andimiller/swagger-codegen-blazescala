@@ -30,32 +30,23 @@ class {{classname}}(client: Client, baseUri: Uri) {
     // create path and map variables
     val path = baseUri / (("{{path}}".stripPrefix("/")){{#pathParams}} replaceAll ("\\{" + "{{baseName}}" + "\\}",{{paramName}}.toString){{/pathParams}})
 
-    // query params
-    val queryParams = new mutable.HashMap[String, String]
-    val headerParams = new mutable.HashMap[String, String]
-
-    {{#allParams}}
-    {{#required}}
-    {{^isPrimitiveType}}
-    if ({{paramName}} == null) throw new Exception("Missing required parameter '{{paramName}}' when calling {{classname}}->{{operationId}}")
-
-    {{/isPrimitiveType}}
-    {{/required}}
-    {{/allParams}}
+    val queryParams = List(
     {{#queryParams}}
     {{^required}}
-    if ({{paramName}} != null) {{paramName}}.foreach { v => queryParams += "{{baseName}}" -> v.queryString}
-
+      {{paramName}}.map{ v => ("{{baseName}}" -> v.queryString)}
     {{/required}}
     {{#required}}
-    if ({{paramName}} != null) queryParams += "{{baseName}}" -> ({{paramName}}.queryString)
-
+      Some("{{baseName}}" -> {{paramName}}.queryString)
     {{/required}}
+    {{#hasMore}},{{/hasMore}}
     {{/queryParams}}
+    ).flatten.toMap
 
+    val headerParams = List(
     {{#headerParams}}
-    headerParams += "{{baseName}}" -> {{paramName}}.queryString
+      "{{baseName}}" -> {{paramName}}.queryString
     {{/headerParams}}
+    ).toMap
 
     val requestWithQueryParams  = queryParams.foldLeft(path) { case (req, (k, v)) => req.withQueryParam(k, v)}
     val headers = Headers(headerParams.map{ case (k, v) => Header(k, v)}.toList)
