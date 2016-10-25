@@ -18,6 +18,11 @@ object QueryStringEncoders {
     override def queryString(t: Integer): String = t.toString
   }
 
+  implicit object QueryStringBoolean extends QueryString[Boolean] {
+    override def queryString(t: Boolean): String = if (t) "true" else "false"
+  }
+
+
   implicit class QueryStringableObject[T](t: T) {
     def queryString(implicit qsi: QueryString[T]): String = qsi.queryString(t)
   }
