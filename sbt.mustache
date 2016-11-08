@@ -4,9 +4,12 @@ name := "{{artifactId}}"
 
 scalaVersion := "2.11.8"
 
+version := "{{appVersion}}"
+
 val HTTP4S_VERSION = "0.14.6"
 
 resolvers += Resolver.sonatypeRepo("releases")
+=======
 
 libraryDependencies ++= Seq(
   "org.http4s" %% "http4s-core"               % HTTP4S_VERSION,
