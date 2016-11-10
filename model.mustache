@@ -2,15 +2,11 @@ package {{package}}
 
 import java.time.{Instant => DateTime}
 import java.util.UUID
-import argonaut._, Argonaut._
-import ArgonautShapeless._
-import argonautCodecs.ArgonautCodecs._
-import argonaut.derive.JsonCodec
 
 {{#models}}
 
 {{#model}}
-@JsonCodec case class {{classname}} (
+case class {{classname}} (
   {{#vars}}{{name}}: {{^required}}Option[{{/required}}{{datatype}}{{^required}}]{{/required}}{{#hasMore}},{{/hasMore}}{{#description}}  // {{description}}{{/description}}
   {{/vars}}
 )
