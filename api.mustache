@@ -58,7 +58,7 @@ class {{classname}}(client: Client, baseUri: Uri) {
 
     client.fetch(fullReqWithBody) { resp =>
       val dec = resp.status.code match {
-        case 200 => decoder.map(_.right[{{operationId}}Errors])
+        case i if ((i>199) && (i<300)) => decoder.map(_.right[{{operationId}}Errors])
         {{#responses}}
         {{^isDefault}}case {{code}} => {{dataType}}decoder.map(x => Coproduct[{{operationId}}Errors](x).left[{{returnType}}{{^returnType}}Unit{{/returnType}}]){{/isDefault}}
         {{/responses}}
