@@ -25,7 +25,7 @@ class {{classname}}(client: Client, baseUri: Uri) {
   type {{operationId}}Errors = {{#responses}}{{^isDefault}}{{dataType}}{{#hasMore}} :+: {{/hasMore}}{{^hasMore}} :+: CNil{{/hasMore}}{{/isDefault}}{{/responses}}
 
   def {{operationId}}({{#allParams}}{{^required}}{{paramName}}: Option[{{dataType}}] = {{#defaultValue}}Some({{#isString}}"{{/isString}}{{defaultValue}}{{#isString}}"{{/isString}}){{/defaultValue}}{{^defaultValue}}None{{/defaultValue}}{{#hasMore}},{{/hasMore}}
-      {{/required}}{{#required}}{{paramName}}: {{dataType}}{{#defaultValue}} = {{{defaultValue}}}{{/defaultValue}}{{#hasMore}},
+      {{/required}}{{#required}}{{paramName}}: {{dataType}}{{#defaultValue}} = {{#isString}}"{{/isString}}{{{defaultValue}}}{{#isString}}"{{/isString}}{{/defaultValue}}{{#hasMore}},
       {{/hasMore}}{{/required}}{{/allParams}}, token: Option[String] = None)(implicit {{#bodyParam}}encoder: EncodeJson[{{dataType}}],{{/bodyParam}} decoder: DecodeJson[{{returnType}}{{^returnType}}Unit{{/returnType}}]{{#responses}}{{^isDefault}}{{dataType}}decoder: DecodeJson[{{dataType}}]{{/isDefault}}{{#hasMore}},{{/hasMore}}{{/responses}}){{#returnType}}: Task[\/[{{operationId}}Errors,{{returnType}}]]{{/returnType}}{{^returnType}}: Task[\/[{{operationId}}Errors,Unit]]{{/returnType}} = {
     // create path and map variables
     val path = baseUri / (("{{path}}".stripPrefix("/")){{#pathParams}} replaceAll ("\\{" + "{{baseName}}" + "\\}",{{paramName}}.toString){{/pathParams}})
