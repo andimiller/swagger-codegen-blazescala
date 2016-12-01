@@ -6,13 +6,37 @@ import {{apiPackage}}._
 import org.http4s.client.blaze._
 import org.http4s.client.Client
 import org.http4s.Uri
-
+import scalaz.concurrent.Task
+import scalaz.{:+: => _, Coproduct => _, _}, Scalaz._
+import argonaut._
+import scalaz.concurrent.Task
+import org.http4s._
+import org.http4s.client.Client
+import org.http4s.headers.Authorization
+import shapeless.Coproduct
+import org.http4s.argonaut._
 
 class {{clientName}}(injectedClient: Option[Client] = None, baseUri: Uri = Uri.uri("{{basePath}}")) {
 
+  def run[I, O, Errors <: Coproduct](template: RequestTemplate.Aux[I, O, Errors], token: Option[String] = None)(implicit enc: EncodeJson[I], dec: DecodeJson[O]): Task[Errors \/ O] = {
+    val path = baseUri / template.relativePath
+    val requestWithQueryParams = template.queryParams.foldLeft(path) { case (req, (k, v)) => req.withQueryParam(k, v)}
+    val headers = Headers(template.headerParams.map{ case (k, v) => Header(k, v)}.toList)
+    val fullReq = Request(method = template.httpMethod, uri = requestWithQueryParams, headers = headers)
+    val fullReqWithToken = token.foldLeft(fullReq)((req, t) =>  req.putHeaders(Authorization(OAuth2BearerToken(t))))
+    val fullReqWithBody = template.maybeBody.foldLeft(Task.now(fullReqWithToken))((req, b) => req.flatMap(_.withBody(b)(jsonEncoderOf(enc))))
+    client.fetch(fullReqWithBody) { resp =>
+      val decoder = resp.status.code match {
+        case code if ((code>199) && (code<300)) => dec.map(_.right[Errors])
+        case code => template.errorDecoder(code).map(_.left[O])
+      }
+      resp.as(jsonOf(decoder))
+    }
+  }
+
   val client = injectedClient.getOrElse(PooledHttp1Client.apply())
-  {{#apiInfo}}{{#apis}}
-  val {{classVarName}} = new {{classname}}(client, baseUri)
-  {{/apis}}{{/apiInfo}}
+  //{{#apiInfo}}{{#apis}}
+  //val {{classVarName}} = new {{classname}}(client, baseUri)
+  //{{/apis}}{{/apiInfo}}
 
 }
