@@ -8,10 +8,9 @@ import org.http4s.dsl._
 import org.http4s.argonaut._
 import org.http4s.client.Client
 import org.http4s.headers.Authorization
-import argonaut._, Argonaut._
+import argonaut._, Argonaut._, ArgonautShapeless._
 
 import scalaz.concurrent.Task
-import scala.collection.mutable
 
 import scalaz.{:+: => _, Coproduct => _, _}
 import Scalaz._
@@ -19,16 +18,20 @@ import querystringencoders.QueryStringEncoders._
 import shapeless._
 
 {{#operations}}
-class {{classname}}(client: Client, baseUri: Uri) {
+object {{classname}} {
 
   {{#operation}}
-  type {{operationId}}Errors = {{#responses}}{{^isDefault}}{{dataType}}{{#hasMore}} :+: {{/hasMore}}{{^hasMore}} :+: CNil{{/hasMore}}{{/isDefault}}{{/responses}}
-
-  def {{operationId}}({{#allParams}}{{^required}}{{paramName}}: Option[{{dataType}}] = {{#defaultValue}}Some({{#isString}}"{{/isString}}{{defaultValue}}{{#isString}}"{{/isString}}){{/defaultValue}}{{^defaultValue}}None{{/defaultValue}}{{#hasMore}},{{/hasMore}}
+  case class {{operationId}}({{#allParams}}{{^required}}{{paramName}}: Option[{{dataType}}] = {{#defaultValue}}Some({{#isString}}"{{/isString}}{{defaultValue}}{{#isString}}"{{/isString}}){{/defaultValue}}{{^defaultValue}}None{{/defaultValue}}{{#hasMore}},{{/hasMore}}
       {{/required}}{{#required}}{{paramName}}: {{dataType}}{{#defaultValue}} = {{#isString}}"{{/isString}}{{{defaultValue}}}{{#isString}}"{{/isString}}{{/defaultValue}}{{#hasMore}},
-      {{/hasMore}}{{/required}}{{/allParams}}, token: Option[String] = None)(implicit {{#bodyParam}}encoder: EncodeJson[{{dataType}}],{{/bodyParam}} decoder: DecodeJson[{{returnType}}{{^returnType}}Unit{{/returnType}}]{{#responses}}{{^isDefault}}{{dataType}}decoder: DecodeJson[{{dataType}}]{{/isDefault}}{{#hasMore}},{{/hasMore}}{{/responses}}){{#returnType}}: Task[\/[{{operationId}}Errors,{{returnType}}]]{{/returnType}}{{^returnType}}: Task[\/[{{operationId}}Errors,Unit]]{{/returnType}} = {
-    // create path and map variables
-    val path = baseUri / (("{{path}}".stripPrefix("/")){{#pathParams}} replaceAll ("\\{" + "{{baseName}}" + "\\}",{{paramName}}.toString){{/pathParams}})
+      {{/hasMore}}{{/required}}{{/allParams}}) extends {{httpMethod}}RequestTemplate[{{dataType}}{{^dataType}}Unit{{/dataType}},{{returnType}}{{^returnType}}Unit{{/returnType}}] {
+
+    val relativePath = (("{{path}}".stripPrefix("/")){{#pathParams}} replaceAll ("\\{" + "{{baseName}}" + "\\}",{{paramName}}.toString){{/pathParams}})
+
+    type Errors = {{#responses}}{{^isDefault}}{{dataType}}{{#hasMore}} :+: {{/hasMore}}{{^hasMore}} :+: CNil{{/hasMore}}{{/isDefault}}{{/responses}}
+
+    {{^dataType}}
+    val body: Unit = ()
+    {{/dataType}}
 
     val queryParams = List[Option[(String, String)]](
     {{#queryParams}}
@@ -54,23 +57,21 @@ class {{classname}}(client: Client, baseUri: Uri) {
     {{/headerParams}}
     ).flatten.toMap[String, String]
 
-    val requestWithQueryParams  = queryParams.foldLeft(path) { case (req, (k, v)) => req.withQueryParam(k, v)}
-    val headers = Headers(headerParams.map{ case (k, v) => Header(k, v)}.toList)
-    val fullReq = Request(method = {{httpMethod}}, uri = requestWithQueryParams, headers = headers)
+    {{#authMethods}}
+    {{#scopes}}
+    val scopeRequired = Some("{{scope}}")
+    {{/scopes}}
+    {{/authMethods}}
+    {{^authMethods}}
+    val scopeRequired = None
+    {{/authMethods}}
 
-    val fullReqWithToken = token.foldLeft(fullReq)((r, t) => r.copy(headers = r.headers.put(Authorization(OAuth2BearerToken(t)))))
-
-    val fullReqWithBody = {{#bodyParam}}{{#required}}fullReqWithToken.withBody({{paramName}})(jsonEncoderOf(encoder)){{/required}}{{^required}}{{paramName}}.foldLeft(fullReq){(r, p) => r.withBody(p)(jsonEncoderOf(encoder)).run}{{/required}}{{/bodyParam}}{{^bodyParam}}fullReqWithToken{{/bodyParam}}
-
-    client.fetch(fullReqWithBody) { resp =>
-      val dec = resp.status.code match {
-        case i if ((i>199) && (i<300)) => decoder.map(_.right[{{operationId}}Errors])
-        {{#responses}}
-        {{^isDefault}}case {{code}} => {{dataType}}decoder.map(x => Coproduct[{{operationId}}Errors](x).left[{{returnType}}{{^returnType}}Unit{{/returnType}}]){{/isDefault}}
-        {{/responses}}
-      }
-      resp.as(jsonOf(dec))
+    def errorDecoder(status: Int): DecodeJson[Errors] = status match {
+      {{#responses}}
+      {{^isDefault}}case {{code}} => DecodeJson.of[{{dataType}}].map(x => Coproduct[Errors](x)){{/isDefault}}
+      {{/responses}}
     }
+
   }
 
   {{/operation}}
