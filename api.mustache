@@ -42,11 +42,17 @@ class {{classname}}(client: Client, baseUri: Uri) {
     {{/queryParams}}
     ).flatten.toMap[String, String]
 
-    val headerParams = List[(String, String)](
+    val headerParams = List[Option[(String, String)]](
     {{#headerParams}}
-      "{{baseName}}" -> {{paramName}}.queryString
+    {{#required}}
+      Some("{{baseName}}" -> {{paramName}}.queryString)
+    {{/required}}
+    {{^required}}
+      {{paramName}}.map{ v => ("{{baseName}}" -> v.queryString)}
+    {{/required}}
+    {{#hasMore}},{{/hasMore}}
     {{/headerParams}}
-    ).toMap[String, String]
+    ).flatten.toMap[String, String]
 
     val requestWithQueryParams  = queryParams.foldLeft(path) { case (req, (k, v)) => req.withQueryParam(k, v)}
     val headers = Headers(headerParams.map{ case (k, v) => Header(k, v)}.toList)
