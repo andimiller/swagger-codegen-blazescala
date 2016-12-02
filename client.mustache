@@ -16,6 +16,19 @@ import org.http4s.headers.Authorization
 import shapeless.Coproduct
 import org.http4s.argonaut._
 
+
+object {{clientName}} {
+  {{#apiInfo}}{{#apis}}
+  val {{classVarName}} = {{classname}}
+  {{/apis}}{{/apiInfo}}
+
+  implicit class RunnableRequestTemplate[I, O, Errors <: Coproduct](template: RequestTemplate.Aux[I, O, Errors]) {
+    def run(client: {{clientName}})(implicit enc: EncodeJson[I], dec: DecodeJson[O]): Task[Errors \/ O] = {
+      client.run(template)
+    }
+  }
+}
+
 class {{clientName}}(injectedClient: Option[Client] = None, baseUri: Uri = Uri.uri("{{basePath}}")) {
 
   def run[I, O, Errors <: Coproduct](template: RequestTemplate.Aux[I, O, Errors], token: Option[String] = None)(implicit enc: EncodeJson[I], dec: DecodeJson[O]): Task[Errors \/ O] = {
@@ -35,8 +48,4 @@ class {{clientName}}(injectedClient: Option[Client] = None, baseUri: Uri = Uri.u
   }
 
   val client = injectedClient.getOrElse(PooledHttp1Client.apply())
-  //{{#apiInfo}}{{#apis}}
-  //val {{classVarName}} = new {{classname}}(client, baseUri)
-  //{{/apis}}{{/apiInfo}}
-
 }
