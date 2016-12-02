@@ -27,6 +27,9 @@ object {{clientName}} {
     def run(client: {{clientName}})(implicit enc: EncodeJson[I], dec: DecodeJson[O]): Task[Errors \/ O] = {
       client.run(template)
     }
+    def run(client: Metrics{{clientName}})(implicit enc: EncodeJson[I], dec: DecodeJson[O]): Task[Errors \/ O] = {
+      client.run(template)
+    }
   }
 }
 
