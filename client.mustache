@@ -19,7 +19,7 @@ import org.http4s.argonaut._
 
 object {{clientName}} {
   {{#apiInfo}}{{#apis}}
-  val {{classVarName}} = {{classname}}
+  def {{classVarName}} = {{classname}}
   {{/apis}}{{/apiInfo}}
 
   implicit class RunnableRequestTemplate[I, O, Errors <: Coproduct](template: RequestTemplate.Aux[I, O, Errors]) {
