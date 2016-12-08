@@ -33,12 +33,12 @@ object {{clientName}} {
   }
 }
 
-class {{clientName}}(injectedClient: Option[Client] = None, baseUri: Uri = Uri.uri("{{basePath}}")) {
+class {{clientName}}(useragent: String, injectedClient: Option[Client] = None, baseUri: Uri = Uri.uri("{{basePath}}")) {
 
   def run[I, O, Errors <: Coproduct](template: RequestTemplate.Aux[I, O, Errors], token: Option[String] = None)(implicit enc: EncodeJson[I], dec: DecodeJson[O]): Task[Errors \/ O] = {
     val path = baseUri / template.relativePath
     val requestWithQueryParams = template.queryParams.foldLeft(path) { case (req, (k, v)) => req.withQueryParam(k, v)}
-    val headers = Headers(template.headerParams.map{ case (k, v) => Header(k, v)}.toList)
+    val headers = Headers(template.headerParams.map{ case (k, v) => Header(k, v)}.toList :+ Header("User-Agent", useragent))
     val fullReq = Request(method = template.httpMethod, uri = requestWithQueryParams, headers = headers)
     val fullReqWithToken = token.foldLeft(fullReq)((req, t) =>  req.putHeaders(Authorization(OAuth2BearerToken(t))))
     val fullReqWithBody = template.maybeBody.foldLeft(Task.now(fullReqWithToken))((req, b) => req.flatMap(_.withBody(b)(jsonEncoderOf(enc))))
@@ -54,7 +54,7 @@ class {{clientName}}(injectedClient: Option[Client] = None, baseUri: Uri = Uri.u
   val client = injectedClient.getOrElse(PooledHttp1Client.apply())
 }
 
-class Metrics{{clientName}}(metricPrefix: String, metrics: MetricRegistry, injectedClient: Option[Client] = None, baseUri: Uri = Uri.uri("{{basePath}}")) {
+class Metrics{{clientName}}(metricPrefix: String, metrics: MetricRegistry, useragent: String, injectedClient: Option[Client] = None, baseUri: Uri = Uri.uri("{{basePath}}")) {
 
   // overall metrics
   val successful = metrics.meter(metricPrefix+".client.successful")
@@ -64,7 +64,7 @@ class Metrics{{clientName}}(metricPrefix: String, metrics: MetricRegistry, injec
   def run[I, O, Errors <: Coproduct](template: RequestTemplate.Aux[I, O, Errors], token: Option[String] = None)(implicit enc: EncodeJson[I], dec: DecodeJson[O]): Task[Errors \/ O] = {
     val path = baseUri / template.relativePath
     val requestWithQueryParams = template.queryParams.foldLeft(path) { case (req, (k, v)) => req.withQueryParam(k, v)}
-    val headers = Headers(template.headerParams.map{ case (k, v) => Header(k, v)}.toList)
+    val headers = Headers(template.headerParams.map{ case (k, v) => Header(k, v)}.toList :+ Header("User-Agent", useragent))
     val fullReq = Request(method = template.httpMethod, uri = requestWithQueryParams, headers = headers)
     val fullReqWithToken = token.foldLeft(fullReq)((req, t) =>  req.putHeaders(Authorization(OAuth2BearerToken(t))))
     val fullReqWithBody = template.maybeBody.foldLeft(Task.now(fullReqWithToken))((req, b) => req.flatMap(_.withBody(b)(jsonEncoderOf(enc))))
