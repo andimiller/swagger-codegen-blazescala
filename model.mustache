@@ -1,12 +1,16 @@
 package {{package}}
 
-import java.time.{Instant => DateTime, LocalDate => Date}
+import java.time.{Instant => DateTime}
+import java.time.{Instant => Date}
 import java.util.UUID
+import argonaut._, Argonaut._
+import argonaut.derive.JsonCodec
+import eveapi.argonautCodecs.ArgonautCodecs._
 
 {{#models}}
 
 {{#model}}
-case class {{classname}} (
+@JsonCodec case class {{classname}} (
   {{#vars}}{{name}}: {{^required}}Option[{{/required}}{{datatype}}{{^required}}]{{/required}}{{#hasMore}},{{/hasMore}}{{#description}}  // {{description}}{{/description}}
   {{/vars}}
 )
