@@ -1,4 +1,4 @@
-package argonautCodecs
+package eveapi.argonautCodecs
 
 import argonaut._
 import java.time.format.DateTimeParseException
@@ -17,20 +17,15 @@ object ArgonautCodecs {
                   .fromString(str)
                   .fold(err => DecodeResult.fail(err.toString, c.history), DecodeResult.ok))
   )
-  implicit val instantCodec: CodecJson[Instant] = CodecJson(
-      (instant: Instant) => Json.jString(instant.toString),
-      c =>
-        c.as[String]
-          .flatMap(
-              str =>
-                \/.fromTryCatchNonFatal(Instant.parse(str))
-                  .orElse(
-                      \/.fromTryCatchNonFatal(LocalDateTime.parse(str).toInstant(ZoneOffset.UTC)))
-                  .fold(err =>
-                          err match {
-                        case e: DateTimeParseException => DecodeResult.fail(e.toString, c.history)
-                        case e => throw e
-                    },
-                        DecodeResult.ok))
-  )
+  implicit val instantEncode: EncodeJson[Instant] = EncodeJson(instant => Json.jString(instant.toString))
+  implicit val instantDecode: DecodeJson[Instant] = DecodeJson(
+      c => c.as[String].flatMap(str =>
+        \/.fromTryCatchNonFatal(Instant.parse(str))
+          .orElse(\/.fromTryCatchNonFatal(LocalDateTime.parse(str).toInstant(ZoneOffset.UTC)))
+          .fold(err =>
+          err match {
+            case e: DateTimeParseException => DecodeResult.fail(e.toString, c.history)
+            case e => throw e
+          },
+            DecodeResult.ok)))
 }
