@@ -1,8 +1,6 @@
-package eveapi.esi.api
-
 import argonaut._
 import scalaz.concurrent.Task
-import org.http4s._
+import org.http4s.{DecodeResult => _, _}
 import shapeless.Coproduct
 import scalaz.{:+: => _, Coproduct => _, _}, Scalaz._
 

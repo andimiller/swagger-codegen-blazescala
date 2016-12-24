@@ -1,4 +1,3 @@
-package querystringencoders
 
 object QueryStringEncoders {
 

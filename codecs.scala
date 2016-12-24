@@ -1,5 +1,3 @@
-package argonautCodecs
-
 import argonaut._
 import java.time.format.DateTimeParseException
 import org.http4s.Uri
