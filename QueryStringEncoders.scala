@@ -18,6 +18,10 @@ object QueryStringEncoders {
     override def queryString(t: Integer): String = t.toString
   }
 
+  implicit object QueryStringFloat extends QueryString[Float] {
+    override def queryString(t: Float): String = t.toString
+  }
+
   implicit object QueryStringBoolean extends QueryString[Boolean] {
     override def queryString(t: Boolean): String = if (t) "true" else "false"
   }
