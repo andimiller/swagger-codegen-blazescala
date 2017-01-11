@@ -44,7 +44,7 @@ package {{invokerPackage}} {
 	    val fullReq = Request(method = template.httpMethod, uri = requestWithQueryParams, headers = headers)
 	    val fullReqWithToken = token.foldLeft(fullReq)((req, t) =>  req.putHeaders(Authorization(OAuth2BearerToken(t))))
 	    val fullReqWithBody = template.maybeBody.foldLeft(Task.now(fullReqWithToken))((req, b) => req.flatMap(_.withBody(b)(jsonEncoderOf(enc))))
-	    client.apply(fullReqWithBody).map { resp =>
+	    fullReqWithBody.flatMap(client.apply).map { resp =>
 	      val decoder = resp.status.code match {
 		case code if ((code>199) && (code<300)) => dec.map(_.right[Errors])
 		case code => template.errorDecoder(code).map(_.left[O])
@@ -69,7 +69,7 @@ package {{invokerPackage}} {
 	    val fullReqWithToken = token.foldLeft(fullReq)((req, t) =>  req.putHeaders(Authorization(OAuth2BearerToken(t))))
 	    val fullReqWithBody = template.maybeBody.foldLeft(Task.now(fullReqWithToken))((req, b) => req.flatMap(_.withBody(b)(jsonEncoderOf(enc))))
 	    val timer = time.time()
-	    client.apply(fullReqWithBody).map { resp =>
+	    fullReqWithBody.flatMap(client.apply).map { resp =>
 	      timer.stop()
 	      val decoder = resp.status.code match {
 		case code if ((code>199) && (code<300)) =>
