@@ -2,20 +2,19 @@ package {{package}}
 
 {{#imports}}import {{import}}
 {{/imports}}
-import org.http4s.{Header, Headers, Request, Uri, OAuth2BearerToken}
+import org.http4s.{Header, Headers, Request, Uri}
 import org.http4s.client.blaze._
 import org.http4s.dsl._
-import org.http4s.argonaut._
+import org.http4s.circe._
 import org.http4s.client.Client
 import org.http4s.headers.Authorization
-import argonaut._, Argonaut._, ArgonautShapeless._
-
-import scalaz.concurrent.Task
-
-import scalaz.{:+: => _, Coproduct => _, _}
-import Scalaz._
+import io.circe._, io.circe.generic.auto._
+import cats.effect.IO
+import cats._, cats.implicits._, cats.syntax._
 import QueryStringEncoders._
+import CirceCodecs._
 import shapeless._
+import io.circe.java8.time._
 
 {{#operations}}
 object {{classname}} {
@@ -66,9 +65,9 @@ object {{classname}} {
     val scopeRequired = None
     {{/authMethods}}
 
-    def errorDecoder(status: Int): DecodeJson[Errors] = status match {
+    def errorDecoder(status: Int): Decoder[Errors] = status match {
       {{#responses}}
-      {{^isDefault}}case {{code}} => DecodeJson.of[{{dataType}}].map(x => Coproduct[Errors](x)){{/isDefault}}
+      {{^isDefault}}case {{code}} => Decoder[{{dataType}}].map(x => Coproduct[Errors](x)){{/isDefault}}
       {{/responses}}
     }
 

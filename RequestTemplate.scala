@@ -1,14 +1,12 @@
-import argonaut._
-import scalaz.concurrent.Task
-import org.http4s.{DecodeResult => _, _}
+import org.http4s._
 import shapeless.Coproduct
-import scalaz.{:+: => _, Coproduct => _, _}, Scalaz._
+import io.circe._
 
 trait RequestTemplate[I, O] {
 
   type Errors <: Coproduct
   // Opaque for now. Might need Coproduct LiftAll
-  def errorDecoder(status: Int): DecodeJson[Errors]
+  def errorDecoder(status: Int): Decoder[Errors]
 
   def maybeBody: Option[I]
   def queryParams: Map[String, String]
