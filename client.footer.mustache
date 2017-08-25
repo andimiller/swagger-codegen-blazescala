@@ -69,7 +69,7 @@ package {{invokerPackage}} {
 	    val headers = Headers(template.headerParams.map{ case (k, v) => Header(k, v)}.toList :+ Header("User-Agent", useragent))
 	    val fullReq = Request[E](method = template.httpMethod, uri = requestWithQueryParams, headers = headers)
 	    val fullReqWithToken = token.foldLeft(fullReq)((req, t) =>  req.putHeaders(Authorization(Token(AuthScheme.Bearer, t))))
-	    val fullReqWithBody = template.maybeBody.foldLeft(Effect[E].pure(fullReqWithToken))((req, b) => req.flatMap(_.withBody(b)(Monad[F], jsonEncoder[Encoder[I])))
+	    val fullReqWithBody = template.maybeBody.foldLeft(Effect[E].pure(fullReqWithToken))((req, b) => req.flatMap(_.withBody(b)(Monad[F], jsonEncoder[Encoder[I]])))
 	    val timer = time.time()
 	    fullReqWithBody.flatMap(client.apply).flatMap { res =>
 	      timer.stop()
