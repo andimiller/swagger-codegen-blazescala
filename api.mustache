@@ -22,15 +22,18 @@ object {{classname}} {
   {{#operation}}
   case class {{operationId}}({{#allParams}}{{^required}}{{paramName}}: Option[{{dataType}}] = {{#defaultValue}}Some({{#isString}}"{{/isString}}{{defaultValue}}{{#isString}}"{{/isString}}){{/defaultValue}}{{^defaultValue}}None{{/defaultValue}}{{#hasMore}},{{/hasMore}}
       {{/required}}{{#required}}{{paramName}}: {{dataType}}{{#defaultValue}} = {{#isString}}"{{/isString}}{{{defaultValue}}}{{#isString}}"{{/isString}}{{/defaultValue}}{{#hasMore}},
-      {{/hasMore}}{{/required}}{{/allParams}}) extends {{httpMethod}}RequestTemplate[{{dataType}}{{^dataType}}Unit{{/dataType}},{{returnType}}{{^returnType}}Unit{{/returnType}}] {
+      {{/hasMore}}{{/required}}{{/allParams}}) extends {{httpMethod}}RequestTemplate[{{#bodyParam}}{{#required}}{{dataType}}{{/required}}{{^required}}Option[{{dataType}}]{{/required}}{{/bodyParam}}{{^bodyParam}}Unit{{/bodyParam}},{{returnType}}{{^returnType}}Unit{{/returnType}}] {
 
     val relativePath = (("{{path}}".stripPrefix("/")){{#pathParams}} replaceAll ("\\{" + "{{baseName}}" + "\\}",{{paramName}}.toString){{/pathParams}})
 
     type Errors = {{#responses}}{{^isDefault}}{{dataType}}{{#hasMore}} :+: {{/hasMore}}{{^hasMore}} :+: CNil{{/hasMore}}{{/isDefault}}{{/responses}}
 
-    {{^dataType}}
+    {{#bodyParam}}
+    val body = {{paramName}}
+    {{/bodyParam}}
+    {{^bodyParam}}
     val body: Unit = ()
-    {{/dataType}}
+    {{/bodyParam}}
 
     val queryParams = List[Option[(String, String)]](
     {{#queryParams}}

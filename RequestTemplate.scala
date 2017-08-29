@@ -11,7 +11,7 @@ trait RequestTemplate[I, O] {
   def maybeBody: Option[I]
   def queryParams: Map[String, String]
   def headerParams: Map[String, String]
-  def scopeRequired: Option[String]
+  def scopeRequired: Option[String] = None
   def relativePath: String
   def httpMethod: Method
 }
