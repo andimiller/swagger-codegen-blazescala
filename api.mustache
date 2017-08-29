@@ -2,7 +2,7 @@ package {{package}}
 
 {{#imports}}import {{import}}
 {{/imports}}
-import org.http4s.{Header, Headers, Request, Uri}
+import org.http4s.{Header, Headers, Request, Uri, Method}
 import org.http4s.client.blaze._
 import org.http4s.dsl._
 import org.http4s.circe._
@@ -22,7 +22,7 @@ object {{classname}} {
   {{#operation}}
   case class {{operationId}}({{#allParams}}{{^required}}{{paramName}}: Option[{{dataType}}] = {{#defaultValue}}Some({{#isString}}"{{/isString}}{{defaultValue}}{{#isString}}"{{/isString}}){{/defaultValue}}{{^defaultValue}}None{{/defaultValue}}{{#hasMore}},{{/hasMore}}
       {{/required}}{{#required}}{{paramName}}: {{dataType}}{{#defaultValue}} = {{#isString}}"{{/isString}}{{{defaultValue}}}{{#isString}}"{{/isString}}{{/defaultValue}}{{#hasMore}},
-      {{/hasMore}}{{/required}}{{/allParams}}) extends {{httpMethod}}RequestTemplate[{{#bodyParam}}{{#required}}{{dataType}}{{/required}}{{^required}}Option[{{dataType}}]{{/required}}{{/bodyParam}}{{^bodyParam}}Unit{{/bodyParam}},{{returnType}}{{^returnType}}Unit{{/returnType}}] {
+      {{/hasMore}}{{/required}}{{/allParams}}) extends RequestTemplate[{{#bodyParam}}{{#required}}{{dataType}}{{/required}}{{^required}}Option[{{dataType}}]{{/required}}{{/bodyParam}}{{^bodyParam}}Unit{{/bodyParam}},{{returnType}}{{^returnType}}Unit{{/returnType}}] {
 
     val relativePath = (("{{path}}".stripPrefix("/")){{#pathParams}} replaceAll ("\\{" + "{{baseName}}" + "\\}",{{paramName}}.toString){{/pathParams}})
 
@@ -30,10 +30,14 @@ object {{classname}} {
 
     {{#bodyParam}}
     val body = {{paramName}}
+    override def maybeBody = Some(body)
     {{/bodyParam}}
     {{^bodyParam}}
     val body: Unit = ()
+    override def maybeBody = None
     {{/bodyParam}}
+
+    val httpMethod = Method.{{httpMethod}}
 
     val queryParams = List[Option[(String, String)]](
     {{#queryParams}}
