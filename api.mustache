@@ -61,7 +61,7 @@ object {{classname}} {
 
     {{#authMethods}}
     {{#scopes}}
-    val scopeRequired = Some("{{scope}}")
+    override def scopeRequired = Some("{{scope}}")
     {{/scopes}}
     {{/authMethods}}
     {{^authMethods}}
