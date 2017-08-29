@@ -38,12 +38,12 @@ package {{invokerPackage}} {
 
 	class {{clientName}}[E[_]: Effect](useragent: String, client: HttpService[E], baseUri: Uri = Uri.uri("{{basePath}}")) {
 
-	  def run[I, O, Errors <: Coproduct](template: RequestTemplate.Aux[I, O, Errors], token: Option[String] = None)(implicit enc: Encoder[I], dec: Decoder[O]): E[Either[Errors, O]] = {
+	  def run[I, O, Errors <: Coproduct](template: RequestTemplate.Aux[I, O, Errors], auth: Option[Authorization] = None)(implicit enc: Encoder[I], dec: Decoder[O]): E[Either[Errors, O]] = {
 	    val path = baseUri / template.relativePath
 	    val requestWithQueryParams = template.queryParams.foldLeft(path) { case (req, (k, v)) => req.withQueryParam(k, v)}
 	    val headers = Headers(template.headerParams.map{ case (k, v) => Header(k, v)}.toList :+ Header("User-Agent", useragent))
 	    val fullReq = Request[E](method = template.httpMethod, uri = requestWithQueryParams, headers = headers)
-	    val fullReqWithToken = token.foldLeft(fullReq)((req, t) =>  req.putHeaders(Authorization(Token(AuthScheme.Bearer, t))))
+	    val fullReqWithToken = token.foldLeft(fullReq)((req, a) =>  req.putHeaders(a))
 	    val fullReqWithBody = template.maybeBody.foldLeft(Effect[E].pure(fullReqWithToken))((req, b) => req.flatMap(_.withBody(b.asJson)))
 	    fullReqWithBody.flatMap(client.apply).flatMap { res =>
 	      val resp = res.orNotFound
@@ -63,12 +63,12 @@ package {{invokerPackage}} {
 	  val failed     = metrics.meter(metricPrefix+".client.failed")
 	  val time       = metrics.timer(metricPrefix+".client.requestTime")
 
-	  def run[I, O, Errors <: Coproduct](template: RequestTemplate.Aux[I, O, Errors], token: Option[String] = None)(implicit enc: Encoder[I], dec: Decoder[O]): E[Either[Errors, O]] = {
+	  def run[I, O, Errors <: Coproduct](template: RequestTemplate.Aux[I, O, Errors], token: Option[Authorization] = None)(implicit enc: Encoder[I], dec: Decoder[O]): E[Either[Errors, O]] = {
 	    val path = baseUri / template.relativePath
 	    val requestWithQueryParams = template.queryParams.foldLeft(path) { case (req, (k, v)) => req.withQueryParam(k, v)}
 	    val headers = Headers(template.headerParams.map{ case (k, v) => Header(k, v)}.toList :+ Header("User-Agent", useragent))
 	    val fullReq = Request[E](method = template.httpMethod, uri = requestWithQueryParams, headers = headers)
-	    val fullReqWithToken = token.foldLeft(fullReq)((req, t) =>  req.putHeaders(Authorization(Token(AuthScheme.Bearer, t))))
+	    val fullReqWithToken = token.foldLeft(fullReq)((req, a) =>  req.putHeaders(a))
 	    val fullReqWithBody = template.maybeBody.foldLeft(Effect[E].pure(fullReqWithToken))((req, b) => req.flatMap(_.withBody(b.asJson)))
 	    val timer = time.time()
 	    fullReqWithBody.flatMap(client.apply).flatMap { res =>
