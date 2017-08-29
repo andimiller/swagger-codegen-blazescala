@@ -69,7 +69,7 @@ object {{classname}} {
     {{/scopes}}
     {{/authMethods}}
     {{^authMethods}}
-    val scopeRequired = None
+    override def scopeRequired = None
     {{/authMethods}}
 
     def errorDecoder(status: Int): Decoder[Errors] = status match {
