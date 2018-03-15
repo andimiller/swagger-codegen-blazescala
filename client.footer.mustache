@@ -46,7 +46,7 @@ package {{invokerPackage}} {
 	    val fullReqWithToken = auth.foldLeft(fullReq)((req, a) =>  req.putHeaders(a))
 	    val fullReqWithBody = template.maybeBody.foldLeft(Effect[E].pure(fullReqWithToken))((req, b) => req.flatMap(_.withBody(b.asJson)))
 	    fullReqWithBody.flatMap(client.apply).flatMap { res =>
-	      val resp = res.orNotFound
+	      val resp = res
 	      val decoder = resp.status.code match {
 		case code if ((code>199) && (code<300)) => dec.map(_.asRight[Errors])
 		case code => template.errorDecoder(code).map(_.asLeft[O])
@@ -73,7 +73,7 @@ package {{invokerPackage}} {
 	    val timer = time.time()
 	    fullReqWithBody.flatMap(client.apply).flatMap { res =>
 	      timer.stop()
-	      val resp  = res.orNotFound
+	      val resp  = res
 	      val decoder = resp.status.code match {
 		case code if ((code>199) && (code<300)) =>
 		  successful.mark()
