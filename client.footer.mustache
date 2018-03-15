@@ -36,7 +36,7 @@ package {{invokerPackage}} {
 	  }
 	}
 
-	class {{clientName}}[E[_]: Effect](useragent: String, client: HttpService[E], baseUri: Uri = Uri.uri("{{basePath}}")) {
+	class {{clientName}}[E[_]: Effect](useragent: String, client: Kleisli[E, Request[E], Response[E]], baseUri: Uri = Uri.uri("{{basePath}}")) {
 
 	  def run[I, O, Errors <: Coproduct](template: RequestTemplate.Aux[I, O, Errors], auth: Option[Authorization] = None)(implicit enc: Encoder[I], dec: Decoder[O]): E[Either[Errors, O]] = {
 	    val path = baseUri / template.relativePath
@@ -56,7 +56,7 @@ package {{invokerPackage}} {
 	  }
 	}
 
-	class Metrics{{clientName}}[E[_]: Effect](metricPrefix: String, metrics: MetricRegistry, useragent: String, client: HttpService[E], baseUri: Uri = Uri.uri("{{basePath}}")) {
+	class Metrics{{clientName}}[E[_]: Effect](metricPrefix: String, metrics: MetricRegistry, useragent: String, client: Kleisli[E, Request[E], Response[E]], baseUri: Uri = Uri.uri("{{basePath}}")) {
 
 	  // overall metrics
 	  val successful = metrics.meter(metricPrefix+".client.successful")
