@@ -2,19 +2,19 @@ package {{package}}
 
 {{#imports}}import {{import}}
 {{/imports}}
+import io.circe._, io.circe.generic.auto._
+import io.circe.java8.time._
 import org.http4s.{Header, Headers, Request, Uri, Method}
 import org.http4s.client.blaze._
 import org.http4s.dsl._
 import org.http4s.circe._
 import org.http4s.client.Client
 import org.http4s.headers.Authorization
-import io.circe._, io.circe.generic.auto._
 import cats.effect.IO
 import cats._, cats.implicits._, cats.syntax._
 import QueryStringEncoders._
 import CirceCodecs._
 import shapeless._
-import io.circe.java8.time._
 
 {{#operations}}
 object {{classname}} {
