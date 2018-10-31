@@ -88,7 +88,6 @@ package {{invokerPackage}} {
 	import cats.syntax.either.catsSyntaxEitherId
 	import org.http4s._
 	import org.http4s.client.Client
-	import org.http4s.client.DisposableResponse
 	import org.http4s.headers.Authorization
 	import shapeless.Coproduct
 	import org.http4s.circe._
@@ -111,7 +110,7 @@ package {{invokerPackage}} {
 	  }
 	}
 
-	class {{clientName}}[E[_]: Effect](useragent: String, client: Kleisli[E, Request[E], DisposableResponse[E]], baseUri: Uri = Uri.uri("{{basePath}}")) {
+	class {{clientName}}[E[_]: Effect](useragent: String, client: Kleisli[E, Request[E], Resource[E, Response[E]]], baseUri: Uri = Uri.uri("{{basePath}}")) {
 
 	  def run[I, O, Errors <: Coproduct](template: RequestTemplate.Aux[I, O, Errors], auth: Option[Authorization] = None)(implicit enc: Encoder[I], dec: Decoder[O]): E[Either[Errors, O]] = {
 	    val path = baseUri / template.relativePath
@@ -119,9 +118,9 @@ package {{invokerPackage}} {
 	    val headers = Headers(template.headerParams.map{ case (k, v) => Header(k, v)}.toList :+ Header("User-Agent", useragent))
 	    val fullReq = Request[E](method = template.httpMethod, uri = requestWithQueryParams, headers = headers)
 	    val fullReqWithToken = auth.foldLeft(fullReq)((req, a) =>  req.putHeaders(a))
-	    val fullReqWithBody = template.maybeBody.foldLeft(Effect[E].pure(fullReqWithToken))((req, b) => req.flatMap(_.withBody(b.asJson)))
+	    val fullReqWithBody = template.maybeBody.foldLeft(Effect[E].pure(fullReqWithToken))((req, b) => req.map(_.withEntity(b.asJson)))
 	    fullReqWithBody.flatMap(client.apply).flatMap { res =>
-	      res.apply({ resp =>
+	      res.use({ resp =>
 		      val decoder = resp.status.code match {
 			case code if ((code>199) && (code<300)) => dec.map(_.asRight[Errors])
 			case code => template.errorDecoder(code).map(_.asLeft[O])
@@ -132,7 +131,7 @@ package {{invokerPackage}} {
 	  }
 	}
 
-	class Metrics{{clientName}}[E[_]: Effect](metricPrefix: String, metrics: MetricRegistry, useragent: String, client: Kleisli[E, Request[E], DisposableResponse[E]], baseUri: Uri = Uri.uri("{{basePath}}")) {
+	class Metrics{{clientName}}[E[_]: Effect](metricPrefix: String, metrics: MetricRegistry, useragent: String, client: Kleisli[E, Request[E], Resource[E, Response[E]]], baseUri: Uri = Uri.uri("{{basePath}}")) {
 
 	  // overall metrics
 	  val successful = metrics.meter(metricPrefix+".client.successful")
@@ -145,10 +144,10 @@ package {{invokerPackage}} {
 	    val headers = Headers(template.headerParams.map{ case (k, v) => Header(k, v)}.toList :+ Header("User-Agent", useragent))
 	    val fullReq = Request[E](method = template.httpMethod, uri = requestWithQueryParams, headers = headers)
 	    val fullReqWithToken = auth.foldLeft(fullReq)((req, a) =>  req.putHeaders(a))
-	    val fullReqWithBody = template.maybeBody.foldLeft(Effect[E].pure(fullReqWithToken))((req, b) => req.flatMap(_.withBody(b.asJson)))
+	    val fullReqWithBody = template.maybeBody.foldLeft(Effect[E].pure(fullReqWithToken))((req, b) => req.map(_.withEntity(b.asJson)))
 	    val timer = time.time()
 	    fullReqWithBody.flatMap(client.apply).flatMap { res =>
-	      res.apply({ resp =>
+	      res.use({ resp =>
 		      timer.stop()
 		      val decoder = resp.status.code match {
 			case code if ((code>199) && (code<300)) =>
