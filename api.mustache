@@ -15,6 +15,7 @@ import cats._, cats.implicits._, cats.syntax._
 import QueryStringEncoders._
 import CirceCodecs._
 import shapeless._
+import scala.language.higherKinds
 
 {{#operations}}
 object {{classname}} {
@@ -26,7 +27,7 @@ object {{classname}} {
 
     val relativePath = (("{{path}}".stripPrefix("/")){{#pathParams}} replaceAll ("\\{" + "{{baseName}}" + "\\}",{{paramName}}.toString){{/pathParams}})
 
-    type Errors = {{#responses}}{{^isDefault}}{{dataType}}{{#hasMore}} :+: {{/hasMore}}{{^hasMore}} :+: CNil{{/hasMore}}{{/isDefault}}{{/responses}}
+    type Errors = {{#responses}}{{^isDefault}}{{#dataType}}{{dataType}}{{/dataType}}{{^dataType}}Unit{{/dataType}}{{#hasMore}} :+: {{/hasMore}}{{/isDefault}}{{^hasMore}} :+: CNil{{/hasMore}}{{/responses}}
 
     {{#bodyParam}}
     val body = {{paramName}}
@@ -74,7 +75,7 @@ object {{classname}} {
 
     def errorDecoder(status: Int): Decoder[Errors] = status match {
       {{#responses}}
-      {{^isDefault}}case {{code}} => Decoder[{{dataType}}].map(x => Coproduct[Errors](x)){{/isDefault}}
+      {{^isDefault}}case {{code}} => Decoder[{{#dataType}}{{dataType}}{{/dataType}}{{^dataType}}Unit{{/dataType}}].map(x => Coproduct[Errors](x)){{/isDefault}}
       {{/responses}}
     }
 

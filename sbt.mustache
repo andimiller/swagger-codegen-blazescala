@@ -4,7 +4,7 @@ name := "{{artifactId}}"
 
 scalaVersion := "2.12.4"
 
-val HTTP4S_VERSION = "0.18.10"
+val HTTP4S_VERSION = "0.20.0-M1"
 
 resolvers += Resolver.sonatypeRepo("releases")
 resolvers += Resolver.sonatypeRepo("snapshots")
@@ -21,7 +21,7 @@ libraryDependencies ++= Seq(
   "net.jodah" % "expiringmap" % "0.5.7"
 )
 
-val circeVersion = "0.10.0-M1"
+val circeVersion = "0.10.0"
 
 libraryDependencies ++= Seq(
   "io.circe" %% "circe-core",
